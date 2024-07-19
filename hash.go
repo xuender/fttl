@@ -38,10 +38,10 @@ func Hash(key []byte) uint64 {
 	return siphash.Hash(_key0, _key1, key)
 }
 
-func IntHash[I constraints.Integer](num I) uint64 {
+func Int2Bytes[I constraints.Integer](num I) []byte {
 	num64 := uint64(num)
 
-	return Hash([]byte{
+	return []byte{
 		byte(num64),
 		byte(num64 >> _eight),
 		byte(num64 >> _sixteen),
@@ -50,5 +50,9 @@ func IntHash[I constraints.Integer](num I) uint64 {
 		byte(num64 >> _forty),
 		byte(num64 >> _fortyEight),
 		byte(num64 >> _fiftySix),
-	})
+	}
+}
+
+func IntHash[I constraints.Integer](num I) uint64 {
+	return Hash(Int2Bytes(num))
 }
