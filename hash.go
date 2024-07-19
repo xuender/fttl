@@ -2,6 +2,7 @@ package fttl
 
 import (
 	"encoding/hex"
+	"path/filepath"
 
 	"github.com/dchest/siphash"
 	"golang.org/x/exp/constraints"
@@ -20,10 +21,14 @@ const (
 )
 
 func Path(num uint64) (string, string) {
-	return hex.EncodeToString([]byte{
-			byte(num),
-			byte(num >> _eight),
-		}),
+	return filepath.Join(
+			hex.EncodeToString([]byte{
+				byte(num),
+			}),
+			hex.EncodeToString([]byte{
+				byte(num >> _eight),
+			}),
+		),
 		hex.EncodeToString([]byte{
 			byte(num >> _sixteen),
 			byte(num >> _twentyFour),
