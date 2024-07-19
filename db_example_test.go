@@ -60,3 +60,21 @@ func ExampleDB_PutTTL() {
 	// value
 	// not found
 }
+
+func ExampleDB_Has() {
+	fdb := fttl.New(os.TempDir())
+	key := []byte("has")
+
+	defer fdb.Delete(key)
+
+	fdb.PutTTL(key, []byte("value"), time.Millisecond*100, 0)
+
+	fmt.Println(fdb.Has(key))
+	time.Sleep(time.Millisecond * 200)
+
+	fmt.Println(fdb.Has(key))
+
+	// Output:
+	// true
+	// false
+}

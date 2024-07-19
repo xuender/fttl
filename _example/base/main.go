@@ -16,6 +16,7 @@ func main() {
 
 	val, _ := fdb.Get([]byte("key"))
 	fmt.Println(string(val))
+	fmt.Println(fdb.Has([]byte("key")))
 
 	fdb.Delete([]byte("key"))
 }

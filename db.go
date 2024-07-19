@@ -104,6 +104,33 @@ func (p *DB) Delete(key []byte) error {
 	return p.delete(num)
 }
 
+func (p *DB) Has(key []byte) bool {
+	num := Hash(key)
+
+	p.lock.RLock()
+
+	item, has := p.cfg[num]
+	p.lock.RUnlock()
+
+	if has {
+		now := time.Now()
+
+		if now.After(item.Expire) {
+			p.lock.Lock()
+			defer p.lock.Unlock()
+
+			_ = p.delete(num)
+
+			return false
+		}
+	}
+
+	path := p.path(num)
+	info, err := os.Stat(path)
+
+	return err == nil && !info.IsDir()
+}
+
 func (p *DB) Close() {
 	p.wait.Add(1)
 	close(p.done)
