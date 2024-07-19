@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/dchest/siphash"
+	"golang.org/x/exp/constraints"
 )
 
 const (
@@ -35,4 +36,19 @@ func Path(num uint64) (string, string) {
 
 func Hash(key []byte) uint64 {
 	return siphash.Hash(_key0, _key1, key)
+}
+
+func IntHash[I constraints.Integer](num I) uint64 {
+	num64 := uint64(num)
+
+	return Hash([]byte{
+		byte(num64),
+		byte(num64 >> _eight),
+		byte(num64 >> _sixteen),
+		byte(num64 >> _twentyFour),
+		byte(num64 >> _thirtyTwo),
+		byte(num64 >> _forty),
+		byte(num64 >> _fortyEight),
+		byte(num64 >> _fiftySix),
+	})
 }
