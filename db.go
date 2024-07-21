@@ -19,6 +19,7 @@ type DB struct {
 	once sync.Once
 	done chan struct{}
 	wait sync.WaitGroup
+	run  bool
 }
 
 func New(dir string) *DB {
@@ -132,9 +133,11 @@ func (p *DB) Has(key []byte) bool {
 }
 
 func (p *DB) Close() {
-	p.wait.Add(1)
-	close(p.done)
-	p.wait.Wait()
+	if p.run {
+		p.wait.Add(1)
+		close(p.done)
+		p.wait.Wait()
+	}
 }
 
 func (p *DB) delete(num uint64) error {
