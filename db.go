@@ -146,15 +146,30 @@ func (p *DB) delete(num uint64) error {
 	delete(p.cfg, num)
 
 	err := os.Remove(path)
-	dir := filepath.Dir(path)
-
-	if info, err := os.ReadDir(dir); err == nil {
-		if len(info) == 0 {
-			_ = os.Remove(dir)
-		}
-	}
+	p.removeDir(filepath.Dir(path))
 
 	return err
+}
+
+func (p *DB) removeDir(path string) {
+	if path == p.dir {
+		return
+	}
+
+	items, err := os.ReadDir(path)
+	if err != nil {
+		return
+	}
+
+	if len(items) > 0 {
+		return
+	}
+
+	if err := os.Remove(path); err != nil {
+		return
+	}
+
+	p.removeDir(filepath.Dir(path))
 }
 
 func (p *DB) path(num uint64) string {
