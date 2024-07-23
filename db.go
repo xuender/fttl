@@ -8,18 +8,18 @@ import (
 )
 
 const (
-	_fileMode   os.FileMode = 0o664
-	_DirFileMod os.FileMode = 0o771
+	_fileMode os.FileMode = 0o664
+	_dirMode  os.FileMode = 0o771
 )
 
 type DB struct {
-	dir  string
-	cfg  map[uint64]*Policy
-	lock sync.RWMutex
-	once sync.Once
-	done chan struct{}
-	wait sync.WaitGroup
-	run  bool
+	dir   string
+	cfg   map[uint64]*Policy
+	lock  sync.RWMutex
+	once  sync.Once
+	done  chan struct{}
+	wait  sync.WaitGroup
+	isRun bool
 }
 
 func New(dir string) *DB {
@@ -133,7 +133,7 @@ func (p *DB) Has(key []byte) bool {
 }
 
 func (p *DB) Close() {
-	if p.run {
+	if p.isRun {
 		p.wait.Add(1)
 		close(p.done)
 		p.wait.Wait()
@@ -184,7 +184,7 @@ func (p *DB) put(key, value []byte) (uint64, error) {
 	dir := filepath.Dir(path)
 
 	if _, err := os.Stat(dir); err != nil {
-		if err := os.MkdirAll(dir, _DirFileMod); err != nil {
+		if err := os.MkdirAll(dir, _dirMode); err != nil {
 			return num, err
 		}
 	}

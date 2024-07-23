@@ -8,7 +8,7 @@ import (
 )
 
 func (p *DB) ttlInit() {
-	p.run = true
+	p.isRun = true
 	go p.tickClean()
 }
 
