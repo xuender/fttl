@@ -30,35 +30,49 @@ func New(dir string) *DB {
 }
 
 func (p *DB) Get(key []byte) ([]byte, error) {
-	num := Hash(key)
+	return p.GetByHash(Hash(key))
+}
 
+func (p *DB) GetByHash(hash uint64) ([]byte, error) {
+	if err := p.Refresh(hash); err != nil {
+		return nil, err
+	}
+
+	return p.GetByPath(p.path(hash))
+}
+
+func (p *DB) Refresh(hash uint64) error {
 	p.lock.RLock()
 
-	item, has := p.cfg[num]
+	item, has := p.cfg[hash]
 	p.lock.RUnlock()
 
-	if has {
-		now := time.Now()
+	if !has {
+		return nil
+	}
 
-		if now.After(item.Expire) {
-			p.lock.Lock()
-			defer p.lock.Unlock()
+	now := time.Now()
 
-			_ = p.delete(num)
+	if now.After(item.Expire) {
+		p.lock.Lock()
+		defer p.lock.Unlock()
 
-			return nil, ErrNotFound
-		}
+		_ = p.delete(hash)
 
-		if item.Access > 0 {
-			expire := now.Add(item.Access)
-			if expire.After(item.Expire) {
-				item.Expire = expire
-			}
+		return ErrNotFound
+	}
+
+	if item.Access > 0 {
+		expire := now.Add(item.Access)
+		if expire.After(item.Expire) {
+			item.Expire = expire
 		}
 	}
 
-	path := p.path(num)
+	return nil
+}
 
+func (p *DB) GetByPath(path string) ([]byte, error) {
 	info, err := os.Stat(path)
 	if err == nil && !info.IsDir() {
 		return os.ReadFile(path)
@@ -71,29 +85,37 @@ func (p *DB) Get(key []byte) ([]byte, error) {
 	return nil, err
 }
 
-func (p *DB) Put(key, value []byte) error {
-	_, err := p.put(key, value)
+func (p *DB) Put(key, value []byte) *Result {
+	num := Hash(key)
+	path := p.path(num)
+	dir := filepath.Dir(path)
 
-	return err
+	if _, err := os.Stat(dir); err != nil {
+		if err := os.MkdirAll(dir, _dirMode); err != nil {
+			return &Result{Error: err, Path: path, Hash: num}
+		}
+	}
+
+	return &Result{Error: os.WriteFile(path, value, _fileMode), Path: path, Hash: num}
 }
 
-func (p *DB) PutTTL(key, value []byte, expire, access time.Duration) error {
-	sum, err := p.put(key, value)
-	if err != nil {
-		return err
+func (p *DB) PutTTL(key, value []byte, expire, access time.Duration) *Result {
+	res := p.Put(key, value)
+	if res.Error != nil {
+		return res
 	}
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	p.cfg[sum] = &Policy{
+	p.cfg[res.Hash] = &Policy{
 		Expire: time.Now().Add(expire),
 		Access: access,
 	}
 
 	p.once.Do(p.ttlInit)
 
-	return nil
+	return res
 }
 
 func (p *DB) Delete(key []byte) error {
@@ -176,18 +198,4 @@ func (p *DB) path(num uint64) string {
 	dir, base := Path(num)
 
 	return filepath.Join(p.dir, dir, base)
-}
-
-func (p *DB) put(key, value []byte) (uint64, error) {
-	num := Hash(key)
-	path := p.path(num)
-	dir := filepath.Dir(path)
-
-	if _, err := os.Stat(dir); err != nil {
-		if err := os.MkdirAll(dir, _dirMode); err != nil {
-			return num, err
-		}
-	}
-
-	return num, os.WriteFile(path, value, _fileMode)
 }

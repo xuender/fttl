@@ -14,7 +14,9 @@ func ExampleDB_Get() {
 	key := []byte("get")
 
 	defer fdb.Delete(key)
-	fmt.Println(fdb.Put(key, []byte("value")))
+
+	res := fdb.Put(key, []byte("value"))
+	fmt.Println(res.Error)
 
 	val, err := fdb.Get(key)
 	fmt.Println(err)
